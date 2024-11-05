@@ -28,7 +28,7 @@ class HTTPClient:
 
     @staticmethod
     def _normalize_url(url):
-        if url.endswith('/'):
+        if not url or url.endswith('/'):
             return url
         else:
             return f"{url}/"
