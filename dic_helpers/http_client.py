@@ -126,3 +126,15 @@ class HTTPClient:
 
     def patch(self, path, **kwargs):
         return self._make_request('PATCH', urljoin(self.base_url, path), **kwargs)
+
+    def request(self, method, path, **kwargs):
+        if method == 'GET':
+            self.get(path, **kwargs)
+        elif method == 'POST':
+            self.post(path, **kwargs)
+        elif method == 'PUT':
+            self.put(path, **kwargs)
+        elif method == 'DELETE':
+            self.delete(path, **kwargs)
+        elif method == 'PATCH':
+            self.patch(path, **kwargs)
