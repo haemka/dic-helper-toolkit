@@ -1,7 +1,5 @@
 import pytest
 import responses
-from unittest.mock import patch, MagicMock
-from oauthlib.oauth2 import TokenExpiredError
 from dic_helpers.http_client import HTTPClient
 
 

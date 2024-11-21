@@ -24,7 +24,7 @@ build:
 test:
   stage: test
   script:
-    - pip install pytest
+    - pip install pytest responses
     - pip install dist/*.whl
     - python -m pytest
 
