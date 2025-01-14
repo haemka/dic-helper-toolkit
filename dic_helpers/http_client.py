@@ -171,7 +171,7 @@ class HTTPClient:
         :rtype: requests.Response
         :raises requests.HTTPError: If the request fails.
         """
-        url = urljoin(self.base_url, path.lstrip('/'))
+        url = urljoin(self.base_url, path)
         try:
             response = self.session.request(method, url, **kwargs)
             response.raise_for_status()
