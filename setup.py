@@ -7,7 +7,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'requests',
-        'requests-oauthlib'
+        'requests-oauthlib',
         'fhir.resources'
     ]
 )
