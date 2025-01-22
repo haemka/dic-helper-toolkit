@@ -8,6 +8,7 @@ setup(
     install_requires=[
         'requests',
         'requests-oauthlib',
+        'oauthlib',
         'fhir.resources'
     ]
 )
