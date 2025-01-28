@@ -7,7 +7,6 @@ from oauthlib.oauth2 import LegacyApplicationClient, BackendApplicationClient, T
 from urllib.parse import urljoin
 
 
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 

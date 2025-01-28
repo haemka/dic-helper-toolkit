@@ -7,7 +7,6 @@ from fhir.resources.R4B.bundle import Bundle
 from dic_helpers.http_client import HTTPClient
 
 
-logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
