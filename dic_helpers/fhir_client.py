@@ -147,69 +147,74 @@ class FHIRClient(HTTPClient):
 
         return all_entries_bundle
 
-    def get_resource(self, resource_type: str, id: str) -> Any:
+    def get_resource(self, resource_type: str, id: str, **kwargs: Any) -> Any:
         """Retrieve a single resource
 
         :param resource_type: The resource type to search for.
         :type resource_type: str
         :param id: The id of the resource to retrieve.
         :type id: str
+        :param kwargs: Additional arguments to pass to the request.
         :return: The resource retrieved.
         :rtype: Any
         """
-        response = self.get(f"{resource_type}/{id}")
+        response = self.get(f"{resource_type}/{id}", **kwargs)
         resource_dict = response.json()
         resource_class = get_fhir_model_class(resource_type)
         return resource_class.model_validate(resource_dict)
 
-    def create_resource(self, resource: Any) -> Any:
+    def create_resource(self, resource: Any, **kwargs: Any) -> Any:
         """Create a new resource
 
         :param resource: The resource to create.
         :type resource: Any
+        :param kwargs: Additional arguments to pass to the request.
         :return: The created resource.
         :rtype: Any
         """
         resource_type = resource.get_resource_type()
-        response = self.post(f"{resource_type}", json=resource.dict())
+        response = self.post(f"{resource_type}", json=resource.dict(), **kwargs)
         created_resource_dict = response.json()
         resource_class = get_fhir_model_class(resource_type)
         return resource_class.model_validate(created_resource_dict)
 
-    def update_resource(self, resource: Any) -> Any:
+    def update_resource(self, resource: Any, **kwargs: Any) -> Any:
         """Update an existing resource
 
         :param resource: The resource to update.
         :type resource: Any
+        :param kwargs: Additional arguments to pass to the request.
         :return: The updated resource.
         :rtype: Any
         """
         resource_type = resource.get_resource_type()
         resource_id = resource.id
-        response = self.put(f"{resource_type}/{resource_id}", json=resource.dict())
+        response = self.put(f"{resource_type}/{resource_id}", json=resource.dict(), **kwargs)
         updated_resource_dict = response.json()
         resource_class = get_fhir_model_class(resource_type)
         return resource_class.model_validate(updated_resource_dict)
 
-    def delete_resource(self, resource_type: str, id: str) -> None:
+    def delete_resource(self, resource_type: str, id: str, **kwargs: Any) -> None:
         """Delete a resource
 
         :param resource_type: The resource type to search for.
         :type resource_type: str
+        :param kwargs: Additional arguments to pass to the request.
         :param id: The id of the resource to delete.
         :type id: str
         """
-        self.delete(f"{resource_type}/{id}")
+        self.delete(f"{resource_type}/{id}", **kwargs)
 
-    def execute_bundle(self, bundle: Bundle) -> Bundle:
+    def execute_bundle(self, bundle: Bundle, **kwargs: Any) -> Bundle:
         """Execute a transaction or batch Bundle
 
         :param bundle: The Bundle to execute.
         :type bundle: Bundle
+        :param kwargs: Additional arguments to pass to the request.
         :return: The executed Bundle.
         :rtype: Bundle
         """
-        response = self.post("", json=bundle.model_dump_json())
+        response = self.post("", json=bundle.model_dump_json(), **kwargs)
         result_bundle_dict = response.json()
         resource_class = get_fhir_model_class('Bundle')
         return resource_class.model_validate(result_bundle_dict)
