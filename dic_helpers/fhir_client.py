@@ -1,7 +1,7 @@
 import logging
 import json
 from typing import Dict, Any, Generator, Optional
-from urllib.parse import urlparse, parse_qs, urlencode
+from urllib.parse import urlparse, parse_qs, urlencode, urljoin
 from fhir.resources.R4B import get_fhir_model_class
 from fhir.resources.R4B.bundle import Bundle
 from dic_helpers.http_client import HTTPClient
@@ -85,11 +85,11 @@ class FHIRClient(HTTPClient):
         params['_count'] = self.page_size
 
         # Construct initial URL
-        path = f"{resource_type}?{urlencode(params, doseq=True)}"
-        url = self.base_url + path
+        url = urljoin(self.base_url, resource_type)
+        path = resource_type
 
-        while url:
-            response = self.get(url)
+        while path:
+            response = self.get(path, params=params)
             bundle_dict = response.json()
             resource_class = get_fhir_model_class('Bundle')
             bundle = resource_class.model_validate_json(json.dumps(bundle_dict))
@@ -98,15 +98,19 @@ class FHIRClient(HTTPClient):
 
             if self._is_standard_paging(bundle_dict):
                 # Standard FHIR paging
-                url = self._get_next_url(bundle_dict)
+                url = urlparse(self._get_next_url(bundle_dict))
+                path = url.path
+                params = url.params
             else:
                 # Non-standard paging
                 if 'entry' in bundle_dict and len(bundle_dict['entry']) == self.page_size:
                     current_offset = int(parse_qs(urlparse(url).query).get('_getpagesoffset', ['0'])[0])
                     next_offset = current_offset + self.page_size
-                    url = self._construct_next_url(url, next_offset)
+                    url = urlparse(self._construct_next_url(url, next_offset))
+                    path = url.path
+                    params = url.params
                 else:
-                    url = None
+                    path = None
 
     def search_all(self, resource_type: str, params: Optional[Dict[str, Any]] = None) -> Bundle:
         """Perform a FHIR search and return a single Bundle containing all entries.
