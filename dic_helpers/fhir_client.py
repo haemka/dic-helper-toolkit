@@ -82,14 +82,14 @@ class FHIRClient(HTTPClient):
             params = {}
 
         # Ensure _count parameter is set
-        params['_count'] = self.page_size
+        params['_count'] = params.get('_count', self.page_size)
 
         # Construct initial URL
         url = urljoin(self.base_url, resource_type)
-        path = resource_type
+        logger.debug(f"Search request with {url} and params {params}")
 
-        while path:
-            response = self.get(path, params=params)
+        while url:
+            response = self.get(url, params=params)
             bundle_dict = response.json()
             resource_class = get_fhir_model_class('Bundle')
             bundle = resource_class.model_validate_json(json.dumps(bundle_dict))
@@ -97,20 +97,20 @@ class FHIRClient(HTTPClient):
             yield bundle
 
             if self._is_standard_paging(bundle_dict):
-                # Standard FHIR paging
-                url = urlparse(self._get_next_url(bundle_dict))
-                path = url.path
-                params = url.params
-            else:
-                # Non-standard paging
-                if 'entry' in bundle_dict and len(bundle_dict['entry']) == self.page_size:
-                    current_offset = int(parse_qs(urlparse(url).query).get('_getpagesoffset', ['0'])[0])
-                    next_offset = current_offset + self.page_size
-                    url = urlparse(self._construct_next_url(url, next_offset))
-                    path = url.path
-                    params = url.params
+                next_url = self._get_next_url(bundle_dict)
+                if next_url:
+                    parsed_next_url = urlparse(next_url)
+                    url = parsed_next_url.geturl()
+                    params = parse_qs(parsed_next_url.query)
                 else:
-                    path = None
+                    url = None
+            else:
+                if 'entry' in bundle_dict and len(bundle_dict['entry']) == self.page_size:
+                    current_offset = int(parse_qs(urlparse(url).query).get('_skip', ['0'])[0])
+                    next_offset = current_offset + self.page_size
+                    url = self._construct_next_url(url, next_offset)
+                else:
+                    url = None
 
     def search_all(self, resource_type: str, params: Optional[Dict[str, Any]] = None) -> Bundle:
         """Perform a FHIR search and return a single Bundle containing all entries.
@@ -165,7 +165,7 @@ class FHIRClient(HTTPClient):
         response = self.get(f"{resource_type}/{id}", **kwargs)
         resource_dict = response.json()
         resource_class = get_fhir_model_class(resource_type)
-        return resource_class.model_validate(resource_dict)
+        return resource_class.model_validate_json(json.dumps(resource_dict))
 
     def create_resource(self, resource: Any, **kwargs: Any) -> Any:
         """Create a new resource
@@ -180,7 +180,7 @@ class FHIRClient(HTTPClient):
         response = self.post(f"{resource_type}", json=resource.dict(), **kwargs)
         created_resource_dict = response.json()
         resource_class = get_fhir_model_class(resource_type)
-        return resource_class.model_validate(created_resource_dict)
+        return resource_class.model_validate_json(json.dumps(created_resource_dict))
 
     def update_resource(self, resource: Any, **kwargs: Any) -> Any:
         """Update an existing resource
@@ -196,7 +196,7 @@ class FHIRClient(HTTPClient):
         response = self.put(f"{resource_type}/{resource_id}", json=resource.dict(), **kwargs)
         updated_resource_dict = response.json()
         resource_class = get_fhir_model_class(resource_type)
-        return resource_class.model_validate(updated_resource_dict)
+        return resource_class.model_validate_json(json.dumps(updated_resource_dict))
 
     def delete_resource(self, resource_type: str, id: str, **kwargs: Any) -> None:
         """Delete a resource
@@ -221,7 +221,7 @@ class FHIRClient(HTTPClient):
         response = self.post("", json=bundle.model_dump_json(), **kwargs)
         result_bundle_dict = response.json()
         resource_class = get_fhir_model_class('Bundle')
-        return resource_class.model_validate(result_bundle_dict)
+        return resource_class.model_validate_json(json.dumps(result_bundle_dict))
 
     def get_capability_statement(self) -> Any:
         """Retrieve the server's capability statement
@@ -232,7 +232,7 @@ class FHIRClient(HTTPClient):
         response = self.get("metadata")
         capability_statement_dict = response.json()
         resource_class = get_fhir_model_class('CapabilityStatement')
-        return resource_class.model_validate(capability_statement_dict)
+        return resource_class.model_validate_json(json.dumps(capability_statement_dict))
 
     def execute_operation(self, operation_name: str, resource_type: Optional[str] = None,
                           id: Optional[str] = None, parameters: Optional[Dict[str, Any]] = None) -> Any:
@@ -258,4 +258,4 @@ class FHIRClient(HTTPClient):
         response = self.post(path, json=parameters)
         result_dict = response.json()
         resource_class = get_fhir_model_class('Parameters')
-        return resource_class.model_validate(result_dict)
+        return resource_class.model_validate_json(json.dumps(result_dict))
