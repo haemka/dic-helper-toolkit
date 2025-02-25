@@ -17,14 +17,15 @@ class FHIRClient(HTTPClient):
     This client uses the custom implementation for a HTTP client from the same package (dic-helper-toolkit). It offers
     easy to use function for FHIR requests and uses fhir.resources as object representations of resources.
     """
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, page_size=50, next_param='_offset', *args, **kwargs) -> None:
         """Initialize the FHIRClient
 
         :param args: Positional arguments to pass to the parent HTTPClient.
         :param kwargs: Keyword arguments to pass to the parent HTTPClient.
         """
         super().__init__(*args, **kwargs)
-        self.page_size = kwargs.get('page_size', 50)
+        self.page_size = page_size
+        self.next_param = next_param
 
     def _is_standard_paging(self, bundle: Dict[str, Any]) -> bool:
         """Check if the bundle follows standard FHIR paging
@@ -51,7 +52,7 @@ class FHIRClient(HTTPClient):
             return next_link
         return None
 
-    def _construct_next_url(self, original_url: str, offset: int) -> str:
+    def _construct_next_params(self, original_params: str, offset: int) -> str:
         """Construct the next URL for non-standard paging
 
         :param original_url: The original URL to use for constructing the next URL.
@@ -61,35 +62,22 @@ class FHIRClient(HTTPClient):
         :return: The next URL.
         :rtype: str
         """
-        parsed_url = urlparse(original_url)
-        query_params = parse_qs(parsed_url.query)
-        query_params['_count'] = [str(self.page_size)]
-        query_params['_getpagesoffset'] = [str(offset)]
-        new_query = urlencode(query_params, doseq=True)
-        return parsed_url._replace(query=new_query).geturl()
+        query_params = original_params
+        query_params['_count'] = str(self.page_size)
+        query_params[self.next_param] = str(offset)
+        return query_params
 
     def search(self, resource_type: str, params: Optional[Dict[str, Any]] = None) -> Generator[Bundle, None, None]:
-        """Perform a FHIR search and yield each page of results as a Bundle.
-
-        :param resource_type: The resource type to search for.
-        :type resource_type: str
-        :param params: Optional parameters to pass to the parent HTTPClient.
-        :type params: Dict[str, Any]
-        :return: A generator that yields Bundles.
-        :rtype: Generator[Bundle, None, None]
-        """
         if params is None:
             params = {}
-
-        # Ensure _count parameter is set
         params['_count'] = params.get('_count', self.page_size)
 
-        # Construct initial URL
         url = urljoin(self.base_url, resource_type)
-        logger.debug(f"Search request with {url} and params {params}")
+        path = resource_type
+        logger.debug(f"Search request with path {path} and params {params}")
 
-        while url:
-            response = self.get(url, params=params)
+        while path:
+            response = self.get(path, params=params)
             bundle_dict = response.json()
             resource_class = get_fhir_model_class('Bundle')
             bundle = resource_class.model_validate_json(json.dumps(bundle_dict))
@@ -97,20 +85,26 @@ class FHIRClient(HTTPClient):
             yield bundle
 
             if self._is_standard_paging(bundle_dict):
+                # Standard FHIR paging
                 next_url = self._get_next_url(bundle_dict)
                 if next_url:
                     parsed_next_url = urlparse(next_url)
-                    url = parsed_next_url.geturl()
-                    params = parse_qs(parsed_next_url.query)
+                    path = parsed_next_url.path
+                    params = parse_qs(parsed_next_url.query)  # Correctly parse query parameters
                 else:
-                    url = None
+                    path = None
             else:
+                # Non-standard paging
                 if 'entry' in bundle_dict and len(bundle_dict['entry']) == self.page_size:
-                    current_offset = int(parse_qs(urlparse(url).query).get('_skip', ['0'])[0])
+                    current_offset = int(params.get(self.next_param, 0))
                     next_offset = current_offset + self.page_size
-                    url = self._construct_next_url(url, next_offset)
+
+                    params = self._construct_next_params(params, next_offset)
+
                 else:
-                    url = None
+                    path = None
+            if path:
+                logger.debug(f"Next URL has path '{path}' and params '{params}'")
 
     def search_all(self, resource_type: str, params: Optional[Dict[str, Any]] = None) -> Bundle:
         """Perform a FHIR search and return a single Bundle containing all entries.
