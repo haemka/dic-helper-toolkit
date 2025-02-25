@@ -17,11 +17,17 @@ class FHIRClient(HTTPClient):
     This client uses the custom implementation for a HTTP client from the same package (dic-helper-toolkit). It offers
     easy to use function for FHIR requests and uses fhir.resources as object representations of resources.
     """
-    def __init__(self, page_size=50, next_param='_offset', *args, **kwargs) -> None:
-        """Initialize the FHIRClient
 
-        :param args: Positional arguments to pass to the parent HTTPClient.
-        :param kwargs: Keyword arguments to pass to the parent HTTPClient.
+    def __init__(self, page_size: int = 50, next_param: str = '_offset', *args: Any, **kwargs: Any) -> None:
+        """
+        Initialize the FHIRClient.
+
+        :param page_size: The number of entries to fetch per page (default: 50).
+        :type page_size: int
+        :param next_param: The query parameter used for pagination (default: '_offset').
+        :type next_param: str
+        :param args: Additional positional arguments to pass to the parent HTTPClient.
+        :param kwargs: Additional keyword arguments to pass to the parent HTTPClient.
         """
         super().__init__(*args, **kwargs)
         self.page_size = page_size
