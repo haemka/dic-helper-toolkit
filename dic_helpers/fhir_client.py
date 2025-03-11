@@ -17,17 +17,11 @@ class FHIRClient(HTTPClient):
     This client uses the custom implementation for a HTTP client from the same package (dic-helper-toolkit). It offers
     easy to use function for FHIR requests and uses fhir.resources as object representations of resources.
     """
+    def __init__(self, page_size=50, next_param='_offset', *args, **kwargs) -> None:
+        """Initialize the FHIRClient
 
-    def __init__(self, page_size: int = 50, next_param: str = '_offset', *args: Any, **kwargs: Any) -> None:
-        """
-        Initialize the FHIRClient.
-
-        :param page_size: The number of entries to fetch per page (default: 50).
-        :type page_size: int
-        :param next_param: The query parameter used for pagination (default: '_offset').
-        :type next_param: str
-        :param args: Additional positional arguments to pass to the parent HTTPClient.
-        :param kwargs: Additional keyword arguments to pass to the parent HTTPClient.
+        :param args: Positional arguments to pass to the parent HTTPClient.
+        :param kwargs: Keyword arguments to pass to the parent HTTPClient.
         """
         super().__init__(*args, **kwargs)
         self.page_size = page_size
@@ -167,7 +161,7 @@ class FHIRClient(HTTPClient):
         resource_class = get_fhir_model_class(resource_type)
         return resource_class.model_validate_json(json.dumps(resource_dict))
 
-    def create_resource(self, resource: Any, **kwargs: Any) -> Any:
+    def post_resource(self, resource: Any, **kwargs: Any) -> Any:
         """Create a new resource
 
         :param resource: The resource to create.
@@ -177,12 +171,16 @@ class FHIRClient(HTTPClient):
         :rtype: Any
         """
         resource_type = resource.get_resource_type()
-        response = self.post(f"{resource_type}", json=resource.dict(), **kwargs)
+        path = None if resource_type == "Bundle" else resource_type
+        response = self.post(path=path, json=json.loads(resource.model_dump_json()), **kwargs)
         created_resource_dict = response.json()
         resource_class = get_fhir_model_class(resource_type)
         return resource_class.model_validate_json(json.dumps(created_resource_dict))
 
-    def update_resource(self, resource: Any, **kwargs: Any) -> Any:
+    # Alias for post_resource()
+    create_resource = post_resource
+
+    def put_resource(self, resource: Any, **kwargs: Any) -> Any:
         """Update an existing resource
 
         :param resource: The resource to update.
@@ -193,10 +191,14 @@ class FHIRClient(HTTPClient):
         """
         resource_type = resource.get_resource_type()
         resource_id = resource.id
-        response = self.put(f"{resource_type}/{resource_id}", json=resource.dict(), **kwargs)
+        response = self.put(f"{resource_type}/{resource_id}",
+                            json=json.loads(resource.model_dump_json()), **kwargs)
         updated_resource_dict = response.json()
         resource_class = get_fhir_model_class(resource_type)
         return resource_class.model_validate_json(json.dumps(updated_resource_dict))
+
+    # Alias for put_resource()
+    update_resource = put_resource
 
     def delete_resource(self, resource_type: str, id: str, **kwargs: Any) -> None:
         """Delete a resource
@@ -209,7 +211,7 @@ class FHIRClient(HTTPClient):
         """
         self.delete(f"{resource_type}/{id}", **kwargs)
 
-    def execute_bundle(self, bundle: Bundle, **kwargs: Any) -> Bundle:
+    def post_bundle(self, bundle: Bundle, **kwargs: Any) -> Bundle:
         """Execute a transaction or batch Bundle
 
         :param bundle: The Bundle to execute.
@@ -218,10 +220,13 @@ class FHIRClient(HTTPClient):
         :return: The executed Bundle.
         :rtype: Bundle
         """
-        response = self.post("", json=bundle.model_dump_json(), **kwargs)
+        response = self.post("", json=json.loads(bundle.model_dump_json()), **kwargs)
         result_bundle_dict = response.json()
         resource_class = get_fhir_model_class('Bundle')
         return resource_class.model_validate_json(json.dumps(result_bundle_dict))
+
+    # Alias for post_bundle()
+    execute_bundle = post_bundle
 
     def get_capability_statement(self) -> Any:
         """Retrieve the server's capability statement

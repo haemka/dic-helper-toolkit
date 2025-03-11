@@ -204,7 +204,8 @@ class HTTPClient:
         :return: The HTTP response.
         :rtype: requests.Response
         """
-        return self.request('POST', urljoin(self.base_url, path), **kwargs)
+        url = self.base_url if not path else urljoin(self.base_url, path)
+        return self.request('POST', url, **kwargs)
 
     def put(self, path: str, **kwargs: Any) -> requests.Response:
         """

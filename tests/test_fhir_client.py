@@ -48,6 +48,24 @@ def test_create_resource(fhir_client):
 
 
 @responses.activate
+def test_post_resource(fhir_client):
+    responses.add(
+        responses.POST,
+        "http://example.com/fhir/Patient",
+        json={"resourceType": "Patient", "id": "456", "name": [{"given": ["Jane"], "family": "Smith"}]},
+        status=201
+    )
+
+    new_patient = Patient(name=[{"given": ["Jane"], "family": "Smith"}])
+    created_patient = fhir_client.post_resource(new_patient)
+
+    assert isinstance(created_patient, Patient)
+    assert created_patient.id == "456"
+    assert created_patient.name[0].given[0] == "Jane"
+    assert created_patient.name[0].family == "Smith"
+
+
+@responses.activate
 def test_update_resource(fhir_client):
     responses.add(
         responses.PUT,
@@ -58,6 +76,24 @@ def test_update_resource(fhir_client):
 
     updated_patient = Patient(id="789", name=[{"given": ["Updated"], "family": "Name"}])
     result = fhir_client.update_resource(updated_patient)
+
+    assert isinstance(result, Patient)
+    assert result.id == "789"
+    assert result.name[0].given[0] == "Updated"
+    assert result.name[0].family == "Name"
+
+
+@responses.activate
+def test_put_resource(fhir_client):
+    responses.add(
+        responses.PUT,
+        "http://example.com/fhir/Patient/789",
+        json={"resourceType": "Patient", "id": "789", "name": [{"given": ["Updated"], "family": "Name"}]},
+        status=200
+    )
+
+    updated_patient = Patient(id="789", name=[{"given": ["Updated"], "family": "Name"}])
+    result = fhir_client.put_resource(updated_patient)
 
     assert isinstance(result, Patient)
     assert result.id == "789"
@@ -164,6 +200,44 @@ def test_execute_bundle(fhir_client):
 
 
 @responses.activate
+def test_post_bundle(fhir_client):
+    input_bundle = Bundle(
+        type="transaction",
+        entry=[{
+            "request": {
+                "method": "POST",
+                "url": "Patient"
+            },
+            "resource": {
+                "resourceType": "Patient",
+                "name": [{"given": ["John"], "family": "Doe"}]
+            }
+        }]
+    )
+
+    responses.add(
+        responses.POST,
+        re.compile(r"http://example\.com/fhir/?$"),
+        json={
+            "resourceType": "Bundle",
+            "type": "transaction-response",
+            "entry": [{
+                "response": {
+                    "status": "201 Created",
+                    "location": "Patient/123"
+                }
+            }]
+        },
+        status=200
+    )
+
+    result = fhir_client.post_bundle(input_bundle)
+    assert isinstance(result, Bundle)
+    assert result.type == "transaction-response"
+    assert len(result.entry) == 1
+
+
+@responses.activate
 def test_get_capability_statement(fhir_client):
     responses.add(
         responses.GET,
@@ -215,6 +289,7 @@ def test_execute_operation(fhir_client):
     assert len(result.parameter) == 1
     assert result.parameter[0].name == "return"
     assert result.parameter[0].resource.get_resource_type() == "Bundle"
+
 
 @responses.activate
 def test_execute_operation_url_building(fhir_client):
