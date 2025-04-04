@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=65.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dic-helper-toolkit"
+version = "0.7.0-uv"
+description = "Your package description"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "requests~=2.32.3",
+    "requests-oauthlib~=2.0.0",
+    "oauthlib~=3.2.2",
+    "fhir.resources~=8.0.0"
+]
+
+[tool.setuptools]
+packages = {find = {}}
