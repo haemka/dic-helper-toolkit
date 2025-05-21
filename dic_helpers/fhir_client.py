@@ -67,9 +67,15 @@ class FHIRClient(HTTPClient):
         query_params[self.next_param] = str(offset)
         return query_params
 
-    def search(self, resource_type: str, params: Optional[Dict[str, Any]] = None) -> Generator[Bundle, None, None]:
+    @staticmethod
+    def _parse_params(params: str) -> Dict[str, Any]:
+        return dict(param.split('=', 1) for param in params.split('?')[1].split('&'))
+
+    def search(self, resource_type: str, params: Optional[Any] = None) -> Generator[Bundle, None, None]:
         if params is None:
             params = {}
+        elif isinstance(params, str):
+            params = self._parse_params(params)
         params['_count'] = params.get('_count', self.page_size)
 
         url = urljoin(self.base_url, resource_type)
