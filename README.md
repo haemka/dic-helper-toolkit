@@ -20,13 +20,13 @@ configuration including authentication and certificate verification. It supports
 from dic_helpers.http_client import HTTPClient
 
 ## No authentication or CA certificate at all
-client = HTTPClient("https://example.com")
+client = HTTPClient(base_url="https://example.com")
 
 ## Basic Auth with CA certificate
-#client = HTTPClient("https://example.com", username="user", password="P4SSW0RD", ca_file="MyCA.crt")
+#client = HTTPClient(base_url="https://example.com", username="user", password="P4SSW0RD", ca_file="MyCA.crt")
 
 ## OAuth 2.0 with username and password
-#client = HTTPClient("https://example.com", username="user", password="P4SSW0RD",
+#client = HTTPClient(base_url="https://example.com", username="user", password="P4SSW0RD",
 #                    auth_url="https://keycloak.example.com", realm="MyRealm", client_id="MyClient",
 #                    client_secret="00000000-00000000-00000000-00000000", ca_file="MyCA.crt")
 
@@ -44,14 +44,14 @@ A simple FHIR client library which uses the HTTP client from above and handles r
 
 ```python
 from dic_helpers.fhir_client import FHIRClient
-from fhir.resources.R4B.address import Address
 
-client = FHIRClient("https://example.com", username="user", password="P4SSW0RD",
+client = FHIRClient(base_url="https://example.com", username="user", password="P4SSW0RD",
                     auth_url="https://keycloak.example.com", realm="MyRealm", client_id="MyClient",
                     client_secret="00000000-00000000-00000000-00000000", ca_file="MyCA.crt")
 
 # Fetch a patient 
-with client.search("Patient", "identifier=0123456789&_lastUpdated=ge2025-01-01") as patient:
+patients = client.search("Patient", "identifier=0123456789&_lastUpdated=ge2025-01-01"):
+for patient in patients:
     print(patient)
 ```
 *Keep in mind, that this returns an object.* 
@@ -59,4 +59,3 @@ with client.search("Patient", "identifier=0123456789&_lastUpdated=ge2025-01-01")
 ### Directory reader
 
 A simple helper class for recursive directory reading.
-
