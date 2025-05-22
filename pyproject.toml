@@ -12,7 +12,19 @@ dependencies = [
     "requests~=2.32.3",
     "requests-oauthlib~=2.0.0",
     "oauthlib~=3.2.2",
-    "fhir.resources~=8.0.0"
+    "fhir.resources~=8.0.0",
+    "pytest>=8.3.5",
+    "certifi==2025.4.26",
+    "charset-normalizer==3.4.2",
+    "pydantic==2.11.4",
+    "typing-extensions==4.13.2",
+    "typing-inspection==0.4.1",
+]
+
+[project.optional-dependencies]
+tests = [
+    "pytest",
+    "responses"
 ]
 
 [tool.setuptools]

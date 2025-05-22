@@ -353,3 +353,8 @@ def test_execute_operation_url_building(fhir_client):
     fhir_client.execute_operation("everything", resource_type="Patient", parameters={"start": "2023-01-01"})
     assert responses.calls[-1].request.url == "http://example.com/fhir/Patient/$everything"
     assert responses.calls[-1].request.body == b'{"start": "2023-01-01"}'
+
+
+def test_parse_params(fhir_client):
+    params = fhir_client._parse_params("start=2023-01-01&end=2023-12-31")
+    assert params == {"start": "2023-01-01", "end": "2023-12-31"}

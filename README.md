@@ -5,7 +5,7 @@ This Toolkit contains helper libraries for the data integration centers daily ta
 ## Installation
 
 Follow the instructions for installation of your desired version in the
-[packages section](https://git.smith.care/diz-jena/py-dic-helper-toolkit/-/packages/).
+[packages section](https://git.smith.care/hkruse/py-dic-helper-toolkit/-/packages/).
 
 ## Contents
 
