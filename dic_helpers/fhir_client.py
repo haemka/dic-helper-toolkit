@@ -69,7 +69,7 @@ class FHIRClient(HTTPClient):
 
     @staticmethod
     def _parse_params(params: str) -> Dict[str, Any]:
-        return dict(param.split('=', 1) for param in params.split('?')[1].split('&'))
+        return dict(param.split('=', 1) for param in params.split('&'))
 
     def search(self, resource_type: str, params: Optional[Any] = None) -> Generator[Bundle, None, None]:
         if params is None:
