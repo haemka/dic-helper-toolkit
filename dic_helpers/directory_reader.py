@@ -10,5 +10,9 @@ class DirectoryReader:
         self.recursive = recursive
 
     def list_files(self):
-        g = os.path.join(os.path.join(self.directory, "**"), self.filter)
-        return glob.iglob(g, recursive=self.recursive)
+        if self.recursive:
+            pattern = os.path.join(self.directory, "**", self.filter)
+            return glob.iglob(pattern, recursive=True)
+        else:
+            pattern = os.path.join(self.directory, self.filter)
+            return glob.iglob(pattern)
