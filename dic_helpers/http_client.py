@@ -123,15 +123,8 @@ class HTTPClient:
                 self.session = OAuth2Session(client=client)
             else:
                 # Client Credentials flow
-                extra = {
-                    'client_id': self.client_id,
-                    'client_secret': self.client_secret,
-                }
                 client = BackendApplicationClient(client_id=self.client_id)
-                self.session = OAuth2Session(client=client,
-                                             auto_refresh_url=config.get('token_endpoint', self.token_url),
-                                             auto_refresh_kwargs=extra,
-                                             token_updater=self._token_updater)
+                self.session = OAuth2Session(client=client)
 
             if self.ca_file:
                 self.session.verify = self.ca_file
@@ -192,7 +185,7 @@ class HTTPClient:
         :return: The HTTP response.
         :rtype: requests.Response
         """
-        return self.request('GET', urljoin(self.base_url, path), **kwargs)
+        return self._make_request('GET', path, **kwargs)
 
     def post(self, path: str, **kwargs: Any) -> requests.Response:
         """
@@ -204,8 +197,7 @@ class HTTPClient:
         :return: The HTTP response.
         :rtype: requests.Response
         """
-        url = self.base_url if not path else urljoin(self.base_url, path)
-        return self.request('POST', url, **kwargs)
+        return self._make_request('POST', path, **kwargs)
 
     def put(self, path: str, **kwargs: Any) -> requests.Response:
         """
@@ -217,7 +209,7 @@ class HTTPClient:
         :return: The HTTP response.
         :rtype: requests.Response
         """
-        return self.request('PUT', urljoin(self.base_url, path), **kwargs)
+        return self._make_request('PUT', path, **kwargs)
 
     def delete(self, path: str, **kwargs: Any) -> requests.Response:
         """
@@ -229,7 +221,7 @@ class HTTPClient:
         :return: The HTTP response.
         :rtype: requests.Response
         """
-        return self.request('DELETE', urljoin(self.base_url, path), **kwargs)
+        return self._make_request('DELETE', path, **kwargs)
 
     def patch(self, path: str, **kwargs: Any) -> requests.Response:
         """
@@ -241,7 +233,7 @@ class HTTPClient:
         :return: The HTTP response.
         :rtype: requests.Response
         """
-        return self.request('PATCH', urljoin(self.base_url, path), **kwargs)
+        return self._make_request('PATCH', path, **kwargs)
 
     def request(self, method: str, path: str, **kwargs: Any) -> requests.Response:
         """
@@ -259,4 +251,4 @@ class HTTPClient:
         :rtype: requests.Response
         :raises requests.HTTPError: If the request fails.
         """
-        return self._make_request(method, urljoin(self.base_url, path), **kwargs)
+        return self._make_request(method, path, **kwargs)

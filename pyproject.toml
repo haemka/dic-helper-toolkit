@@ -4,22 +4,22 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dic-helper-toolkit"
-version = "0.9.2"
+version = "0.9.3"
 description = "Your package description"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "requests~=2.32.5",
+    "requests~=2.34.2",
     "requests-oauthlib~=2.0.0",
     "oauthlib~=3.3.1",
     "fhir.resources~=8.2.0",
-    "pytest>=9.0.2",
-    "certifi==2026.1.4",
-    "charset-normalizer==3.4.4",
-    "pydantic==2.12.5",
-    "typing-extensions==4.15.0",
-    "typing-inspection==0.4.2",
-    "responses>=0.26.0",
+    "pytest~=9.0.3",
+    "certifi~=2026.5.20",
+    "charset-normalizer~=3.4.7",
+    "pydantic~=2.13.4",
+    "typing-extensions~=4.15.0",
+    "typing-inspection~=0.4.2",
+    "responses~=0.26.1",
 ]
 
 [project.optional-dependencies]
