@@ -174,7 +174,7 @@ class HTTPClient:
         if response.status_code == 401:
             logger.debug(f"Token expired for {url}, Re-fetching...")
             self.token = self._fetch_token()
-            response = requests.request(method, url, **kwargs)
+            response = self.session.request(method, url, **kwargs)
 
         response.raise_for_status()
         return response
