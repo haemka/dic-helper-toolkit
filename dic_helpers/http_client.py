@@ -44,7 +44,7 @@ class HTTPClient:
     def __init__(self, base_url: str, username: Optional[str] = None, password: Optional[str] = None,
                  auth_url: Optional[str] = None, realm: Optional[str] = None,
                  client_id: Optional[str] = None, client_secret: Optional[str] = None,
-                 ca_file: Optional[str] = None, rfc5280: bool = False) -> None:
+                 ca_file: Optional[str] = None, rfc5280: bool = True) -> None:
         """Initialize the HTTPClient.
 
         :param base_url: The base URL for API requests.
