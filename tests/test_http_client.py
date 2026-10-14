@@ -88,22 +88,21 @@ def test_create_session_basic_auth(http_client):
     assert http_client.session.auth.password == 'pass'
 
 
-def test_rfc5280_relaxed_by_default():
+def test_rfc5280_strict_by_default():
     client = HTTPClient(base_url="https://api.example.com")
+    assert not isinstance(client.session.get_adapter("https://api.example.com"), NoRFC5280HTTPAdapter)
+
+def test_rfc5280_relaxed_through_proxy():
+    adapter = HTTPClient(base_url="https://api.example.com", rfc5280=False).session.get_adapter("https://api.example.com")
+    proxy_manager = adapter.proxy_manager_for("http://proxy.example.com:3128")
+    assert proxy_manager.connection_pool_kw["ssl_context"] is adapter._ssl_context
+
+
+def test_rfc5280_relaxed():
+    client = HTTPClient(base_url="https://api.example.com", rfc5280=False)
     adapter = client.session.get_adapter("https://api.example.com")
     assert isinstance(adapter, NoRFC5280HTTPAdapter)
     ctx = adapter.poolmanager.connection_pool_kw["ssl_context"]
     assert not ctx.verify_flags & ssl.VERIFY_X509_STRICT
     assert ctx.verify_mode == ssl.CERT_REQUIRED
     assert ctx.check_hostname
-
-
-def test_rfc5280_relaxed_through_proxy():
-    adapter = HTTPClient(base_url="https://api.example.com").session.get_adapter("https://api.example.com")
-    proxy_manager = adapter.proxy_manager_for("http://proxy.example.com:3128")
-    assert proxy_manager.connection_pool_kw["ssl_context"] is adapter._ssl_context
-
-
-def test_rfc5280_strict():
-    client = HTTPClient(base_url="https://api.example.com", rfc5280=True)
-    assert not isinstance(client.session.get_adapter("https://api.example.com"), NoRFC5280HTTPAdapter)
