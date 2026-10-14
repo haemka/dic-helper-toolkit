@@ -1,6 +1,8 @@
+import logging
 import pytest
 import responses
 import re
+from responses import matchers
 #from unittest.mock import patch, MagicMock
 from datetime import datetime, timezone
 from fhir.resources.R4B.bundle import Bundle
@@ -358,3 +360,108 @@ def test_execute_operation_url_building(fhir_client):
 def test_parse_params(fhir_client):
     params = fhir_client._parse_params("start=2023-01-01&end=2023-12-31")
     assert params == {"start": "2023-01-01", "end": "2023-12-31"}
+
+def _patient_entries(*ids):
+    return [{"resource": {"resourceType": "Patient", "id": id}} for id in ids]
+
+
+@pytest.mark.parametrize("next_param", [None, ""])
+@responses.activate
+def test_search_uses_standard_paging_only_without_next_param(next_param):
+    fhir_client = FHIRClient(base_url="http://example.com/fhir", page_size=2, next_param=next_param)
+    responses.add(
+        responses.GET,
+        "http://example.com/fhir/Patient",
+        json={"resourceType": "Bundle", "type": "searchset", "entry": _patient_entries("1", "2")},
+        status=200
+    )
+
+    results = list(fhir_client.search("Patient"))
+    assert len(results) == 1
+    assert len(responses.calls) == 1
+
+
+@pytest.mark.parametrize("total, warned", [(5, True), (2, False), (None, False)])
+@responses.activate
+def test_search_warns_about_truncated_result_without_next_param(caplog, total, warned):
+    fhir_client = FHIRClient(base_url="http://example.com/fhir", page_size=2)
+    bundle = {"resourceType": "Bundle", "type": "searchset", "entry": _patient_entries("1", "2")}
+    if total is not None:
+        bundle["total"] = total
+    responses.add(responses.GET, "http://example.com/fhir/Patient", json=bundle, status=200)
+
+    with caplog.at_level(logging.WARNING, logger="dic_helpers.fhir_client"):
+        results = list(fhir_client.search("Patient"))
+    assert len(results) == 1
+    assert ("next_param" in caplog.text) == warned
+
+
+@responses.activate
+def test_search_follows_standard_next_links():
+    fhir_client = FHIRClient(base_url="http://example.com/fhir", page_size=2)
+    responses.add(
+        responses.GET,
+        "http://example.com/fhir/Patient",
+        match=[matchers.query_param_matcher({"_count": "2"})],
+        json={
+            "resourceType": "Bundle",
+            "type": "searchset",
+            "link": [{"relation": "next", "url": "http://example.com/fhir/Patient?_getpages=abc&_getpagesoffset=2"}],
+            "entry": _patient_entries("1", "2")
+        },
+        status=200
+    )
+    responses.add(
+        responses.GET,
+        "http://example.com/fhir/Patient",
+        match=[matchers.query_param_matcher({"_getpages": "abc", "_getpagesoffset": "2"})],
+        json={
+            "resourceType": "Bundle",
+            "type": "searchset",
+            "link": [{"relation": "previous", "url": "http://example.com/fhir/Patient?_getpages=abc&_getpagesoffset=0"}],
+            "entry": _patient_entries("3")
+        },
+        status=200
+    )
+
+    results = list(fhir_client.search("Patient"))
+    assert [len(bundle.entry) for bundle in results] == [2, 1]
+
+
+@responses.activate
+def test_search_uses_configured_offset_paging():
+    fhir_client = FHIRClient(base_url="http://example.com/fhir", page_size=2, next_param="_offset")
+    responses.add(
+        responses.GET,
+        "http://example.com/fhir/Patient",
+        match=[matchers.query_param_matcher({"_count": "2"})],
+        json={"resourceType": "Bundle", "type": "searchset", "entry": _patient_entries("1", "2")},
+        status=200
+    )
+    responses.add(
+        responses.GET,
+        "http://example.com/fhir/Patient",
+        match=[matchers.query_param_matcher({"_count": "2", "_offset": "2"})],
+        json={"resourceType": "Bundle", "type": "searchset", "entry": _patient_entries("3")},
+        status=200
+    )
+
+    results = list(fhir_client.search("Patient"))
+    assert [len(bundle.entry) for bundle in results] == [2, 1]
+
+
+@responses.activate
+def test_search_stops_when_server_ignores_offset_param(caplog):
+    fhir_client = FHIRClient(base_url="http://example.com/fhir", page_size=2, next_param="_offset")
+    responses.add(
+        responses.GET,
+        re.compile(r"http://example\.com/fhir/Patient.*"),
+        json={"resourceType": "Bundle", "type": "searchset", "entry": _patient_entries("1", "2")},
+        status=200
+    )
+
+    with caplog.at_level(logging.WARNING, logger="dic_helpers.fhir_client"):
+        results = list(fhir_client.search("Patient"))
+    assert len(results) == 1
+    assert len(responses.calls) == 2
+    assert "_offset" in caplog.text

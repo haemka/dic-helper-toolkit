@@ -17,15 +17,19 @@ class FHIRClient(HTTPClient):
     This client uses the custom implementation for a HTTP client from the same package (dic-helper-toolkit). It offers
     easy to use function for FHIR requests and uses fhir.resources as object representations of resources.
     """
-    def __init__(self, page_size=50, next_param='_offset', *args, **kwargs) -> None:
+    def __init__(self, page_size=50, next_param: Optional[str] = None, *args, **kwargs) -> None:
         """Initialize the FHIRClient
 
+        :param page_size: Number of entries to request per search page.
+        :param next_param: Query parameter for offset paging, for servers that don't provide standard FHIR paging
+            links (e.g. '_offset'). Defaults to None, which uses standard FHIR paging only.
         :param args: Positional arguments to pass to the parent HTTPClient.
         :param kwargs: Keyword arguments to pass to the parent HTTPClient.
         """
         super().__init__(*args, **kwargs)
         self.page_size = page_size
-        self.next_param = next_param
+        # An empty string counts as not configured
+        self.next_param: Optional[str] = next_param or None
 
     def _is_standard_paging(self, bundle: Dict[str, Any]) -> bool:
         """Check if the bundle follows standard FHIR paging
@@ -82,9 +86,19 @@ class FHIRClient(HTTPClient):
         path = resource_type
         logger.debug(f"Search request with path {path} and params {params}")
 
+        previous_entries = None
+        received = 0
         while path:
             response = self.get(path, params=params)
             bundle_dict = response.json()
+            entries = bundle_dict.get('entry') or []
+            # A server ignoring the offset parameter returns the same page again, which would otherwise loop forever
+            if entries and entries == previous_entries:
+                logger.warning(f"Server returned the same page again for paging parameter '{self.next_param}'. It "
+                               f"probably does not support this parameter. Stopping the search.")
+                break
+            previous_entries = entries
+            received += len(entries)
             resource_class = get_fhir_model_class('Bundle')
             bundle = resource_class.model_validate_json(json.dumps(bundle_dict))
 
@@ -99,16 +113,19 @@ class FHIRClient(HTTPClient):
                     params = parse_qs(parsed_next_url.query)  # Correctly parse query parameters
                 else:
                     path = None
+            elif self.next_param and len(entries) == self.page_size:
+                # Non-standard offset paging, only if configured
+                current_offset = int(params.get(self.next_param, 0))
+                next_offset = current_offset + self.page_size
+
+                params = self._construct_next_params(params, next_offset)
             else:
-                # Non-standard paging
-                if 'entry' in bundle_dict and len(bundle_dict['entry']) == self.page_size:
-                    current_offset = int(params.get(self.next_param, 0))
-                    next_offset = current_offset + self.page_size
-
-                    params = self._construct_next_params(params, next_offset)
-
-                else:
-                    path = None
+                total = bundle_dict.get('total')
+                if self.next_param is None and isinstance(total, int) and total > received:
+                    logger.warning(f"Search for {resource_type} returned {received} of {total} results without a next "
+                                   f"link. The server probably doesn't support standard FHIR paging, configure "
+                                   f"next_param to use offset paging.")
+                path = None
             if path:
                 logger.debug(f"Next URL has path '{path}' and params '{params}'")
 
