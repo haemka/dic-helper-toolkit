@@ -1,4 +1,5 @@
 import requests
+import ssl
 import logging
 from typing import Optional, Dict, Any
 from requests.auth import HTTPBasicAuth
@@ -10,6 +11,28 @@ from urllib.parse import urljoin
 logger = logging.getLogger(__name__)
 
 
+class NoRFC5280HTTPAdapter(requests.adapters.HTTPAdapter):
+    """
+    HTTP adapter that verifies certificates without Python's strict RFC 5280 checks (``VERIFY_X509_STRICT``).
+
+    Certificate chain and hostname verification stay enabled; only the additional strictness checks enabled by
+    default since Python 3.13 are relaxed. Applies to direct connections as well as connections through proxies.
+    """
+
+    def __init__(self, *args, ca_file: Optional[str] = None, **kwargs):
+        self._ssl_context = ssl.create_default_context(cafile=ca_file)
+        self._ssl_context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+        super().__init__(*args, **kwargs)
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs["ssl_context"] = self._ssl_context
+        super().init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, proxy, **proxy_kwargs):
+        proxy_kwargs["ssl_context"] = self._ssl_context
+        return super().proxy_manager_for(proxy, **proxy_kwargs)
+
+
 class HTTPClient:
     """
     A client for making HTTP requests with support for OAuth2 authentication.
@@ -17,10 +40,11 @@ class HTTPClient:
     This client can handle basic authentication, OAuth2 Resource Owner Password Credentials flow, and OAuth2 Client
     Credentials flow.
     """
+
     def __init__(self, base_url: str, username: Optional[str] = None, password: Optional[str] = None,
                  auth_url: Optional[str] = None, realm: Optional[str] = None,
                  client_id: Optional[str] = None, client_secret: Optional[str] = None,
-                 ca_file: Optional[str] = None) -> None:
+                 ca_file: Optional[str] = None, rfc5280: bool = False) -> None:
         """Initialize the HTTPClient.
 
         :param base_url: The base URL for API requests.
@@ -39,6 +63,10 @@ class HTTPClient:
         :type client_secret: str, optional
         :param ca_file: Path to CA certificate file for SSL verification.
         :type ca_file: str, optional
+        :param rfc5280: Enforce Python's strict RFC 5280 certificate checks (``VERIFY_X509_STRICT``). Defaults to
+            False, which relaxes only these checks so that certificates from non-conforming CAs are accepted;
+            chain and hostname verification remain active either way.
+        :type rfc5280: bool, optional
         """
         self.base_url: str = self._normalize_url(base_url)
         self.username: Optional[str] = username
@@ -48,6 +76,7 @@ class HTTPClient:
         self.client_id: Optional[str] = client_id
         self.client_secret: Optional[str] = client_secret
         self.ca_file: Optional[str] = ca_file
+        self.rfc5280: bool = rfc5280
         self.session: Optional[requests.Session] = None
         self.token: Optional[Dict[str, Any]] = None
         self.token_url: Optional[str] = None
@@ -78,7 +107,7 @@ class HTTPClient:
         """
         config_url = urljoin(urljoin(self.auth_url, f"realms/{self.realm}/"),
                              ".well-known/openid-configuration")
-        response = requests.get(config_url, verify=self.ca_file)
+        response = self.session.get(config_url)
         response.raise_for_status()
         return response.json()
 
@@ -112,33 +141,26 @@ class HTTPClient:
         """
         Create and configure the HTTP session based on the authentication method.
         """
-        if self.auth_url and self.realm and self.client_id and self.client_secret:
-            # OAuth2 flow
-            config = self._get_openid_configuration()
-            self.token_url = config['token_endpoint']
-
+        oauth = self.auth_url and self.realm and self.client_id and self.client_secret
+        if oauth:
             if self.username and self.password:
-                # Resource Owner Password Credentials flow
-                client = LegacyApplicationClient(client_id=self.client_id)
-                self.session = OAuth2Session(client=client)
+                self.session = OAuth2Session(client=LegacyApplicationClient(client_id=self.client_id))
             else:
-                # Client Credentials flow
-                client = BackendApplicationClient(client_id=self.client_id)
-                self.session = OAuth2Session(client=client)
-
-            if self.ca_file:
-                self.session.verify = self.ca_file
-
-            # Fetch initial token
-            token = self._fetch_token()
-            self.token = token
+                self.session = OAuth2Session(client=BackendApplicationClient(client_id=self.client_id))
         else:
             self.session = requests.Session()
             if self.username and self.password:
-                # Basic authentication
                 self.session.auth = HTTPBasicAuth(self.username, self.password)
-            if self.ca_file:
-                self.session.verify = self.ca_file
+
+        if self.ca_file:
+            self.session.verify = self.ca_file
+
+        if not self.rfc5280:
+            self.session.mount('https://', NoRFC5280HTTPAdapter(ca_file=self.ca_file))
+
+        if oauth:
+            self.token_url = self._get_openid_configuration()['token_endpoint']
+            self.token = self._fetch_token()
 
     def _token_updater(self, token: Dict[str, Any]) -> None:
         """
