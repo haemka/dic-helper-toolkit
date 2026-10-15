@@ -66,8 +66,8 @@ class FHIRClient(HTTPClient):
         :return: The next URL.
         :rtype: str
         """
+        # _count stays as requested, the page size of the whole search
         query_params = original_params
-        query_params['_count'] = str(self.page_size)
         query_params[self.next_param] = str(offset)
         return query_params
 
@@ -81,6 +81,9 @@ class FHIRClient(HTTPClient):
         elif isinstance(params, str):
             params = self._parse_params(params)
         params['_count'] = params.get('_count', self.page_size)
+        # The page size actually requested: a _count given by the caller overrides the client's page_size
+        count = params['_count'][0] if isinstance(params['_count'], list) else params['_count']
+        page_size = int(count)
 
         url = urljoin(self.base_url, resource_type)
         path = resource_type
@@ -113,10 +116,10 @@ class FHIRClient(HTTPClient):
                     params = parse_qs(parsed_next_url.query)  # Correctly parse query parameters
                 else:
                     path = None
-            elif self.next_param and len(entries) == self.page_size:
+            elif self.next_param and len(entries) == page_size:
                 # Non-standard offset paging, only if configured
                 current_offset = int(params.get(self.next_param, 0))
-                next_offset = current_offset + self.page_size
+                next_offset = current_offset + page_size
 
                 params = self._construct_next_params(params, next_offset)
             else:

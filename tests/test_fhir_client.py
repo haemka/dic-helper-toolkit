@@ -465,3 +465,52 @@ def test_search_stops_when_server_ignores_offset_param(caplog):
     assert len(results) == 1
     assert len(responses.calls) == 2
     assert "_offset" in caplog.text
+
+
+# Offset paging with a _count given by the caller: a page is full at the requested _count (here 2, not the client's
+# page_size 50), the next offset is 2, and the _count stays as requested.
+@responses.activate
+def test_search_offset_paging_uses_requested_count():
+    fhir_client = FHIRClient(base_url="http://example.com/fhir", page_size=50, next_param="_offset")
+    responses.add(
+        responses.GET,
+        "http://example.com/fhir/Patient",
+        match=[matchers.query_param_matcher({"_count": "2"})],
+        json={"resourceType": "Bundle", "type": "searchset", "entry": _patient_entries("1", "2")},
+        status=200
+    )
+    responses.add(
+        responses.GET,
+        "http://example.com/fhir/Patient",
+        match=[matchers.query_param_matcher({"_count": "2", "_offset": "2"})],
+        json={"resourceType": "Bundle", "type": "searchset", "entry": _patient_entries("3")},
+        status=200
+    )
+
+    results = list(fhir_client.search("Patient", params={"_count": "2"}))
+
+    assert [len(bundle.entry) for bundle in results] == [2, 1]
+
+
+# The same with the parameters given as a query string
+@responses.activate
+def test_search_offset_paging_uses_requested_count_from_query_string():
+    fhir_client = FHIRClient(base_url="http://example.com/fhir", page_size=50, next_param="_offset")
+    responses.add(
+        responses.GET,
+        "http://example.com/fhir/Patient",
+        match=[matchers.query_param_matcher({"active": "true", "_count": "2"})],
+        json={"resourceType": "Bundle", "type": "searchset", "entry": _patient_entries("1", "2")},
+        status=200
+    )
+    responses.add(
+        responses.GET,
+        "http://example.com/fhir/Patient",
+        match=[matchers.query_param_matcher({"active": "true", "_count": "2", "_offset": "2"})],
+        json={"resourceType": "Bundle", "type": "searchset", "entry": _patient_entries("3")},
+        status=200
+    )
+
+    results = list(fhir_client.search("Patient", params="active=true&_count=2"))
+
+    assert [len(bundle.entry) for bundle in results] == [2, 1]
