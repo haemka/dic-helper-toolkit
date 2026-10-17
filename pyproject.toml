@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dic-helper-toolkit"
-version = "0.9.10"
+version = "1.0.0"
 description = "Your package description"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -23,9 +23,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Reading FHIR XML with dic_helpers.fhir_file_reader
+xml = [
+    "lxml~=6.1"
+]
 tests = [
     "pytest",
-    "responses"
+    "responses",
+    "lxml~=6.1"
 ]
 
 [tool.setuptools]

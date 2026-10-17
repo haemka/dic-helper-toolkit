@@ -20,15 +20,35 @@ class NoRFC5280HTTPAdapter(requests.adapters.HTTPAdapter):
     """
 
     def __init__(self, *args, ca_file: Optional[str] = None, **kwargs):
+        """Initialize the adapter with an SSL context without the strict RFC 5280 checks.
+
+        :param args: Positional arguments to pass to requests' HTTPAdapter.
+        :param ca_file: Path to a CA certificate file; if given, only this file is trusted, otherwise the system's CAs.
+        :type ca_file: str, optional
+        :param kwargs: Keyword arguments to pass to requests' HTTPAdapter.
+        """
         self._ssl_context = ssl.create_default_context(cafile=ca_file)
         self._ssl_context.verify_flags &= ~ssl.VERIFY_X509_STRICT
         super().__init__(*args, **kwargs)
 
     def init_poolmanager(self, *args, **kwargs):
+        """Create the pool manager for direct connections with this adapter's SSL context.
+
+        :param args: Positional arguments to pass to requests' HTTPAdapter.init_poolmanager.
+        :param kwargs: Keyword arguments to pass to requests' HTTPAdapter.init_poolmanager.
+        """
         kwargs["ssl_context"] = self._ssl_context
         super().init_poolmanager(*args, **kwargs)
 
     def proxy_manager_for(self, proxy, **proxy_kwargs):
+        """Return the pool manager for connections through a proxy, with this adapter's SSL context.
+
+        :param proxy: The proxy URL.
+        :type proxy: str
+        :param proxy_kwargs: Keyword arguments to pass to requests' HTTPAdapter.proxy_manager_for.
+        :return: The proxy manager.
+        :rtype: urllib3.ProxyManager
+        """
         proxy_kwargs["ssl_context"] = self._ssl_context
         return super().proxy_manager_for(proxy, **proxy_kwargs)
 
@@ -64,7 +84,7 @@ class HTTPClient:
         :param ca_file: Path to CA certificate file for SSL verification.
         :type ca_file: str, optional
         :param rfc5280: Enforce Python's strict RFC 5280 certificate checks (``VERIFY_X509_STRICT``). Defaults to
-            False, which relaxes only these checks so that certificates from non-conforming CAs are accepted;
+            True. False relaxes only these checks so that certificates from non-conforming CAs are accepted;
             chain and hostname verification remain active either way.
         :type rfc5280: bool, optional
         """

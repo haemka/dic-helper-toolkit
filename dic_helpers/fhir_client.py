@@ -48,23 +48,23 @@ class FHIRClient(HTTPClient):
 
         :param bundle: A dictionary representing a FHIR Bundle.
         :type bundle: Dict[str, Any]
-        :return: The next URL from the bundle.
-        :rtype: str
+        :return: The next URL from the bundle, None if it has no 'next' link.
+        :rtype: Optional[str]
         """
         if 'link' in bundle:
             next_link = next((link['url'] for link in bundle['link'] if link['relation'] == 'next'), None)
             return next_link
         return None
 
-    def _construct_next_params(self, original_params: str, offset: int) -> str:
-        """Construct the next URL for non-standard paging
+    def _construct_next_params(self, original_params: Dict[str, Any], offset: int) -> Dict[str, Any]:
+        """Construct the search parameters of the next page for non-standard (offset) paging
 
-        :param original_url: The original URL to use for constructing the next URL.
-        :type original_url: str
-        :param offset: The offset to use for constructing the next URL.
+        :param original_params: The search parameters of the current page; they are changed and returned.
+        :type original_params: Dict[str, Any]
+        :param offset: The offset of the next page, set as the next_param parameter.
         :type offset: int
-        :return: The next URL.
-        :rtype: str
+        :return: The search parameters of the next page, _count unchanged.
+        :rtype: Dict[str, Any]
         """
         # _count stays as requested, the page size of the whole search
         query_params = original_params
@@ -73,9 +73,31 @@ class FHIRClient(HTTPClient):
 
     @staticmethod
     def _parse_params(params: str) -> Dict[str, Any]:
+        """Parse search parameters given as a query string into a dictionary
+
+        :param params: The parameters, e.g. 'identifier=0123456789&_lastUpdated=ge2025-01-01', not URL encoded.
+        :type params: str
+        :return: The parameters by name; a repeated parameter keeps its last value.
+        :rtype: Dict[str, Any]
+        """
         return dict(param.split('=', 1) for param in params.split('&'))
 
     def search(self, resource_type: str, params: Optional[Any] = None) -> Generator[Bundle, None, None]:
+        """Perform a FHIR search and yield every result page as a Bundle
+
+        Pages are followed by the Bundle's 'next' link (standard FHIR paging), or, if next_param is configured and a
+        page is full, by requesting the next offset. A server that returns the same page again for the offset stops
+        the search with a warning. Without next_param, a warning is logged if the Bundle's total shows that results
+        are missing.
+
+        :param resource_type: The resource type to search for.
+        :type resource_type: str
+        :param params: Search parameters as a dictionary (a list value repeats the parameter) or as a query string.
+            '_count' defaults to the client's page_size.
+        :type params: Dict[str, Any] or str, optional
+        :return: A generator that yields the result pages.
+        :rtype: Generator[Bundle, None, None]
+        """
         if params is None:
             params = {}
         elif isinstance(params, str):
@@ -137,10 +159,10 @@ class FHIRClient(HTTPClient):
 
         :param resource_type: The resource type to search for.
         :type resource_type: str
-        :param params: Optional parameters to pass to the parent HTTPClient.
-        :type params: Dict[str, Any]
-        :return: A generator that yields Bundles.
-        :rtype: Generator[Bundle, None, None]
+        :param params: Search parameters, as for search().
+        :type params: Dict[str, Any], optional
+        :return: A searchset Bundle with the entries of all result pages.
+        :rtype: Bundle
         """
         # Initialize an empty Bundle to store all entries
         all_entries_bundle = Bundle(
