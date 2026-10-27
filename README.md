@@ -1,6 +1,11 @@
 # Python DIC Helper Toolkit
 
-This Toolkit contains helper libraries for the data integration centers daily tasks.
+This Toolkit contains helper libraries for the daily tasks of Data Integration Centers (DICs) — the data
+integration and interoperability platforms operated by German university hospitals, as defined by the German
+Medical Informatics Initiative ([Medizininformatik-Initiative, MII](https://www.medizininformatik-initiative.de/))
+and used across projects of the Network of University Medicine
+([Netzwerk Universitätsmedizin, NUM](https://www.netzwerk-universitaetsmedizin.de/)). DICs provide standardized,
+FHIR-based access to clinical and research data for secondary use.
 
 ## Installation
 
