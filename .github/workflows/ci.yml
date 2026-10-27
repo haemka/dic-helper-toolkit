@@ -90,7 +90,7 @@ jobs:
           name: dist
           path: dist
       - run: |
-          uv venv .venv
+          uv venv .venv --clear
           uv pip install --python .venv "$(ls dist/*.whl)[tests]"
           .venv/bin/pytest tests/
 
