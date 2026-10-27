@@ -4,8 +4,12 @@ This Toolkit contains helper libraries for the data integration centers daily ta
 
 ## Installation
 
-Follow the instructions for installation of your desired version in the
-[packages section](https://git.smith.care/hkruse/py-dic-helper-toolkit/-/packages/).
+```shell
+pip install dic-helper-toolkit
+```
+
+The package is published on [PyPI](https://pypi.org/project/dic-helper-toolkit/). To use the FHIR XML reader, install
+the `xml` extra: `pip install dic-helper-toolkit[xml]`.
 
 ## Contents
 

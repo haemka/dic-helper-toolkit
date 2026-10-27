@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dic-helper-toolkit"
 version = "1.0.2"
-description = "Your package description"
+description = "Helper libraries for data integration centers' daily tasks"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -32,6 +32,10 @@ tests = [
     "responses",
     "lxml~=6.1"
 ]
+
+[project.urls]
+Repository = "https://github.com/haemka/dic-helper-toolkit"
+Issues = "https://github.com/haemka/dic-helper-toolkit/issues"
 
 [tool.setuptools]
 packages = {find = {include = ["dic_helpers*"]}}
