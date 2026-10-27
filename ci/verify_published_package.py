@@ -12,6 +12,7 @@ PyPI's simple index is public, so no authentication is needed.
 import argparse
 import hashlib
 import sys
+import time
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urldefrag, urljoin
@@ -119,9 +120,10 @@ def main() -> int:
         return 1
 
     session = requests.Session()
-    links = _index_links(session, args.simple_url, _project_name(local_files[0]))
+    project = _project_name(local_files[0])
 
     if args.assert_absent:
+        links = _index_links(session, args.simple_url, project)
         existing = [p.name for p in local_files if p.name in links]
         if existing:
             print(f"ERROR: already published in the registry: {', '.join(existing)}")
@@ -129,6 +131,18 @@ def main() -> int:
             return 1
         print("None of the files are published yet")
         return 0
+
+    # A freshly published project's first files can take a little while to appear in the simple
+    # index (CDN propagation), so retry instead of failing on a single miss.
+    max_attempts = 10
+    retry_delay_seconds = 10
+    links = {}
+    for attempt in range(1, max_attempts + 1):
+        links = _index_links(session, args.simple_url, project)
+        if all(path.name in links for path in local_files):
+            break
+        print(f"Not all files are in the registry index yet (attempt {attempt}/{max_attempts}), retrying...")
+        time.sleep(retry_delay_seconds)
 
     for path in local_files:
         if path.name not in links:
