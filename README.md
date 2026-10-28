@@ -132,3 +132,8 @@ invalid.
   `patient.json: invalid Patient: birthDate: Date value string does not match spec regex.`. With `"skip"` the message
   is logged as a warning, and reading continues with the next line (NDJSON) or the next file. A missing `lxml` is
   always an error.
+
+
+## License
+
+dic-helper-toolkit is licensed under the [MIT License](LICENSE).
