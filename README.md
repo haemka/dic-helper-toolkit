@@ -9,6 +9,9 @@ FHIR-based access to clinical and research data for secondary use.
 
 ## Installation
 
+Requires **Python 3.13 or newer**: the HTTP client's strict RFC 5280 certificate checks (`rfc5280=True`, the default)
+are Python's default from 3.13 on.
+
 ```shell
 pip install dic-helper-toolkit
 ```

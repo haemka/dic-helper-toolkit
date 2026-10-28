@@ -88,7 +88,7 @@ wheels = [
 
 [[package]]
 name = "dic-helper-toolkit"
-version = "1.0.4"
+version = "1.0.5"
 source = { editable = "." }
 dependencies = [
     { name = "certifi" },
@@ -96,10 +96,8 @@ dependencies = [
     { name = "fhir-resources" },
     { name = "oauthlib" },
     { name = "pydantic" },
-    { name = "pytest" },
     { name = "requests" },
     { name = "requests-oauthlib" },
-    { name = "responses" },
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
@@ -116,21 +114,19 @@ xml = [
 
 [package.metadata]
 requires-dist = [
-    { name = "certifi", specifier = "~=2026.5.20" },
-    { name = "charset-normalizer", specifier = "~=3.4.7" },
-    { name = "fhir-resources", specifier = "~=8.2.0" },
+    { name = "certifi", specifier = ">=2026.5.20" },
+    { name = "charset-normalizer", specifier = ">=3.4.7" },
+    { name = "fhir-resources", specifier = ">=8.2.0" },
     { name = "lxml", marker = "extra == 'tests'", specifier = "~=6.1" },
     { name = "lxml", marker = "extra == 'xml'", specifier = "~=6.1" },
-    { name = "oauthlib", specifier = "~=3.3.1" },
-    { name = "pydantic", specifier = "~=2.13.4" },
-    { name = "pytest", specifier = "~=9.0.3" },
+    { name = "oauthlib", specifier = ">=3.3.1" },
+    { name = "pydantic", specifier = ">=2.13.4" },
     { name = "pytest", marker = "extra == 'tests'" },
-    { name = "requests", specifier = "~=2.34.2" },
-    { name = "requests-oauthlib", specifier = "~=2.0.0" },
-    { name = "responses", specifier = "~=0.26.1" },
+    { name = "requests", specifier = ">=2.34.2" },
+    { name = "requests-oauthlib", specifier = ">=2.0.0" },
     { name = "responses", marker = "extra == 'tests'" },
-    { name = "typing-extensions", specifier = "~=4.15.0" },
-    { name = "typing-inspection", specifier = "~=0.4.2" },
+    { name = "typing-extensions", specifier = ">=4.15.0" },
+    { name = "typing-inspection", specifier = ">=0.4.2" },
 ]
 provides-extras = ["xml", "tests"]
 
